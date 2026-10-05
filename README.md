@@ -20,6 +20,8 @@ Site estático (GitHub Pages) com agenda semanal, clientes, empresa, tipos de se
 
 O `server.js` só aceita chamadas do site informado em `ORIGIN` e só repassa para endereços da rede local. Se abrir o site por `http://localhost:3000` (com `node server.js` na pasta do projeto), o `ORIGIN` não é necessário.
 
+DESATIVAR E REATIVAR PERMISSOES RESTRITIVAS DO APP SMSGATE PARA FUNCIONAR.. .E SOMENTE FUNCIONA COM SIM ...eSim nao é suportado.
+
 ## Limites
 - Os lembretes saem enquanto a agenda estiver aberta no navegador.
 - Os dados ficam no `localStorage` do navegador. Limpar os dados do navegador apaga tudo.
