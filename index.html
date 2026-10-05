@@ -52,6 +52,16 @@
             color: #666;
             margin-top: 4px;
         }
+        .warning-box {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            margin-top: 8px;
+            display: none;
+        }
         button {
             width: 100%;
             padding: 12px;
@@ -99,36 +109,37 @@
     <h2>Configuração do SMS Gateway</h2>
     
     <form id="smsForm">
-        <!-- Configurações de Ligação -->
         <div class="form-group">
             <label for="address">Endereço do Servidor (Gateway API Address)</label>
-            <input type="text" id="address" placeholder="Ex: http://192.168.1.50:8080 ou https://sms-gate.app" required>
-            <div class="help-text">Insira o IP/Porta local (sem a rota /message) ou o endereço do Cloud Server.</div>
+            <input type="text" id="address" placeholder="Ex: https://sms-gate.app" required>
+            <div class="help-text">Insira o endereço HTTPS do Cloud Server ou o endpoint seguro do seu túnel reverso.</div>
+            <div id="mixedContentWarning" class="warning-box">
+                ⚠️ <strong>Aviso de Segurança (Mixed Content):</strong> Está a correr esta página via HTTPS (GitHub Pages). Se tentar submeter para um endereço HTTP local, o browser irá bloquear a ligação por motivos de segurança. Use o Cloud Server (HTTPS) ou converta o seu IP local num endereço seguro usando ferramentas como o Ngrok.
+            </div>
         </div>
 
         <div class="form-group">
             <label for="username">Utilizador / Login</label>
-            <input type="text" id="username" placeholder="Username gerado pela aplicação" required>
+            <input type="text" id="username" placeholder="Username da aplicação" required>
         </div>
 
         <div class="form-group">
             <label for="password">Palavra-passe / Token</label>
-            <input type="password" id="password" placeholder="Password gerada pela aplicação" required>
+            <input type="password" id="password" placeholder="Password da aplicação" required>
         </div>
 
         <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 20px 0;">
         <h2>Envio de Teste</h2>
 
-        <!-- Dados do SMS -->
         <div class="form-group">
             <label for="phoneNumber">Número de Telefone</label>
             <input type="text" id="phoneNumber" placeholder="Ex: +351912345678" required>
-            <div class="help-text">Inclua sempre o código do país (E.164).</div>
+            <div class="help-text">Inclua sempre o código de país padrão (Formato E.164).</div>
         </div>
 
         <div class="form-group">
             <label for="message">Mensagem de Texto</label>
-            <textarea id="message" placeholder="Escreva a sua mensagem aqui..." required>Mensagem de teste enviada via API Android SMS Gateway.</textarea>
+            <textarea id="message" placeholder="Escreva a sua mensagem aqui..." required>Mensagem de teste enviada a partir do GitHub Pages via API Android SMS Gateway.</textarea>
         </div>
 
         <button type="submit" id="sendBtn">Enviar SMS de Teste</button>
@@ -138,45 +149,51 @@
 </div>
 
 <script>
+    const addressInput = document.getElementById('address');
+    const warningBox = document.getElementById('mixedContentWarning');
+
+    // Monitoriza em tempo real para avisar sobre bloqueios de conteúdo misto (HTTP vs HTTPS)
+    addressInput.addEventListener('input', function() {
+        const val = addressInput.value.trim().toLowerCase();
+        if (val.startsWith('http://')) {
+            warningBox.style.display = 'block';
+        } else {
+            warningBox.style.display = 'none';
+        }
+    });
+
     document.getElementById('smsForm').addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const sendBtn = document.getElementById('sendBtn');
         const responseLog = document.getElementById('responseLog');
         
-        // Obter valores dos inputs
-        let address = document.getElementById('address').value.trim();
+        let address = addressInput.value.trim();
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value.trim();
         const phoneNumber = document.getElementById('phoneNumber').value.trim();
         const messageText = document.getElementById('message').value;
 
-        // Normalização do Endereço de API
-        // Remove barras finais se existirem para evitar duplicados
-        address = address.replace(/\/\$/, "");
+        // Limpeza de barras finais
+        address = address.replace(/\/+\$/, "");
         
-        // Define o endpoint correto caso o utilizador não tenha colocado a rota final
         let targetUrl = address;
+        // Garante a inserção da rota final de envio da API de forma dinâmica
         if (!targetUrl.endsWith('/message')) {
             targetUrl = targetUrl + '/message';
         }
 
-        // Construção do Payload conforme especificação oficial do repositório
         const payload = {
-            textMessage: {
-                text: messageText
-            },
+            textMessage: { text: messageText },
             phoneNumbers: [phoneNumber]
         };
 
-        // Interface UI - Estado de carregamento
         sendBtn.disabled = true;
         sendBtn.innerText = 'A enviar...';
         responseLog.style.display = 'none';
         responseLog.className = '';
 
         try {
-            // Autenticação Basic Auth via cabeçalho HTTP
             const credentials = btoa(`${username}:${password}`);
             
             const response = await fetch(targetUrl, {
@@ -188,17 +205,32 @@
                 body: JSON.stringify(payload)
             });
 
-            const data = await response.json();
+            const contentType = response.headers.get("content-type");
+            let responseData;
+            
+            if (contentType && contentType.includes("application/json")) {
+                responseData = await response.json();
+                responseData = JSON.stringify(responseData, null, 2);
+            } else {
+                const textData = await response.text();
+                responseData = `[Resposta de Texto/HTML obtida]\n\n${textData.substring(0, 400)}`;
+            }
 
             if (response.ok) {
-                responseLog.innerText = `Sucesso (${response.status}):\n` + JSON.stringify(data, null, 2);
+                responseLog.innerText = `Sucesso (${response.status}):\n` + responseData;
                 responseLog.classList.add('success');
             } else {
-                responseLog.innerText = `Erro do Servidor (${response.status}):\n` + JSON.stringify(data, null, 2);
+                responseLog.innerText = `Erro do Servidor (${response.status}):\n` + responseData;
                 responseLog.classList.add('error');
             }
         } catch (error) {
-            responseLog.innerText = `Erro de Rede / CORS:\nNão foi possível comunicar com o gateway.\n\nDetalhes: ${error.message}\n\nNota: Se estiver a usar o Local Server, verifique se o seu browser não está a bloquear requisições HTTP (misturadas com HTTPS) ou problemas de CORS.`;
+            let errorMsg = `Erro de Conexão:\n${error.message}\n\n`;
+            if (window.location.protocol === 'https:' && targetUrl.startsWith('http://')) {
+                errorMsg += `Causa provável: O browser bloqueou esta chamada HTTP porque a página está alojada sob HTTPS no GitHub Pages (Bloqueio de Conteúdo Misto).`;
+            } else {
+                errorMsg += `Verifique as credenciais, se há bloqueio de CORS ou se o servidor remoto está acessível de origens externas.`;
+            }
+            responseLog.innerText = errorMsg;
             responseLog.classList.add('error');
         } finally {
             sendBtn.disabled = false;
