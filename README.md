@@ -13,7 +13,7 @@ Site estático (GitHub Pages) com agenda semanal, clientes, empresa, tipos de se
 ### Using SMS local support
 1. Inside an Android device ( >15 version): install the SMSGate apk, turn on the **Local Server**, and do the setup on GitHub page with their (IP e port), o user e a pw.
 3. Inside the PC/Laptop (same network as the android device conection),install  Node.js (>14) > `winget install OpenJS.NodeJS.LTS`
-4. Run the Powershell command >  `server.js`.
+4. Run the Powershell command >  `$env:ORIGIN="https://github.com/carlos-eduardo-1984.github.io"; node .\server.js `.
    NOTE: This window should be on hold opened during the work hours..
 6. Use "Testar conexão com o gateway" and "Enviar mensagem de teste" to check the stability of sms conections.
 
