@@ -10,9 +10,11 @@ const empresa=()=>({horarios:HORARIO_PADRAO(),passo:30,...DB.get('empresa',{})})
 const clientes=()=>DB.get('clientes',[]),servicos=()=>DB.get('servicos',[]);
 function msg(t,erro,id){const m=$(id||'msg');if(m){m.textContent=t;m.className=erro?'erro':''}}
 function renderNav(){
-  const p=location.pathname.split('/').pop()||'index.html',e=DB.get('empresa',{});
-  $('nav').innerHTML=`<div class="brand"><span>${esc(e.nome||'Agenda SMS')}</span></div><nav>${[['index.html','Agenda'],['clientes.html','Clientes'],['empresa.html','Empresa']].map(([h,t])=>`<a href="${h}" ${p===h?'aria-current="page"':''}>${t}</a>`).join('')}</nav>`;
-}
+   const p=location.pathname.split('/').pop()||'index.html',e=DB.get('empresa',{}),logo=DB.get('logo','');
+   let brand=logo?`<img src="${logo}" alt="Logo">`:'';
+   brand+=`<span>${esc(e.nome||'Agenda SMS')}</span>`;
+   $('nav').innerHTML=`<div class="brand">${brand}</div><nav>${[['index.html','Agenda'],['clientes.html','Clientes'],['empresa.html','Empresa']].map(([h,t])=>`<a href="${h}" ${p===h?'aria-current="page"':''}>${t}</a>`).join('')}</nav>`;
+ }
 function pager(el,total,per,page){
   const tp=Math.max(1,Math.ceil(total/per));
   if(total<=per){el.innerHTML=total?`<span class="info">${total} registro(s)</span>`:'';return}

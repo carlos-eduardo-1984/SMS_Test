@@ -1,7 +1,8 @@
 const CAMPOS=['nome','documento','telefone','email','endereco'],ORDEM=[1,2,3,4,5,6,0];
 let svEdit=null;
 function carregar(){
-  const e=empresa();CAMPOS.forEach(c=>$(c).value=e[c]||'');$('passo').value=e.passo;
+  const e=empresa();CAMPOS.forEach(c=>$(c).value=e[c]||'');$('passo').value=e.passo;mostrarPreviewLogo();
+  const github=DB.get('github','');$('githubUrl').value=github;
   $('horas').innerHTML=ORDEM.map(d=>{const h=e.horarios[d];return `<tr><td><label class="chk"><input type="checkbox" id="a${d}" ${h.ativo?'checked':''}>${DIAS[d]}</label></td><td><input type="time" id="i${d}" value="${h.ini}" aria-label="Abre ${DIAS[d]}"></td><td><input type="time" id="f${d}" value="${h.fim}" aria-label="Fecha ${DIAS[d]}"></td></tr>`}).join('');
   const s={minutos:60,ponte:'http://localhost:3000',...DB.get('sms',{})};
   $('smsAtivo').checked=!!s.ativo;$('smsMin').value=s.minutos;$('smsUrl').value=s.url||'';$('smsUser').value=s.user||'';$('smsPass').value=s.pass||'';$('smsDdi').value=s.ddi||'';$('smsPonte').value=s.ponte;
@@ -73,5 +74,54 @@ function comandos(){
 function copiar(i){
   const t=$('cmd'+i).textContent;
   (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>msg('Comando copiado.',0,'msgSms'),()=>msg('Não foi possível copiar. Selecione o comando e copie manualmente.',1,'msgSms'));
+ }
+// ---- Logo ----
+function carregarLogo(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  if(!file.type.startsWith('image/')) {msg('Selecione uma imagem válida.',1,'msgLogo');return}
+  if(file.size>1048576){msg('A imagem não pode ter mais de 1MB.',1,'msgLogo');return}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const logo=e.target.result;
+    DB.set('logo',logo);
+    mostrarPreviewLogo();
+    msg('Logo salva com sucesso.',0,'msgLogo');
+    renderNav();
+  };
+  reader.onerror=()=>{msg('Erro ao carregar a imagem.',1,'msgLogo')};
+  reader.readAsDataURL(file);
+}
+function mostrarPreviewLogo(){
+  const logo=DB.get('logo','');
+  const preview=$('logoPreview');
+  const btnRemover=$('logoRemover');
+  if(logo){
+    preview.innerHTML=`<img src="${logo}" alt="Logo da empresa">`;
+    btnRemover.hidden=false;
+  }else{
+    preview.innerHTML='';
+    btnRemover.hidden=true;
+  }
+}
+function removerLogo(){
+  if(!confirm('Remover a logo da empresa?'))return;
+  DB.set('logo','');
+  mostrarPreviewLogo();
+  msg('Logo removida.',0,'msgLogo');
+  renderNav();
+}
+// ---- GitHub Command ----
+function gerarComandoGithub(){
+  const url=$('githubUrl').value.trim();
+  if(!url){msg('Informe o link do GitHub Pages.',1,'msgGithub');return}
+  if(!url.startsWith('http')){msg('O link deve começar com http ou https.',1,'msgGithub');return}
+  DB.set('github',url);
+  const cmd=`$env:ORIGIN="${url}"; node .\\server.js`;
+  $('msgGithub').innerHTML=`<div class="cmd"><code id="cmdGithub">${esc(cmd)}</code><button class="sec" type="button" onclick="copiarGithub()">Copiar</button></div>`;
+}
+function copiarGithub(){
+  const t=$('cmdGithub').textContent;
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>msg('Comando copiado para a área de transferência.',0,'msgGithub'),()=>msg('Não foi possível copiar. Selecione o comando e copie manualmente.',1,'msgGithub'));
 }
 document.addEventListener('DOMContentLoaded',carregar);
